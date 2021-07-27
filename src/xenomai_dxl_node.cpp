@@ -65,7 +65,7 @@ double max_time = 0.0;
 #define DXL1_ID                          1                   // Dynamixel ID: 1
 #define DXL2_ID                          2
 #define BAUDRATE                        2000000
-#define DEVICENAME                      "/dev/ttyUSB0"      // Check which port is being used on your controller
+#define DEVICENAME                      "/dev/ttyUSB1"      // Check which port is being used on your controller
                                                             // ex) Windows: "COM1"   Linux: "/dev/ttyUSB0"
 
 #define TORQUE_ENABLE                   1                   // Value for enabling the torque
@@ -96,9 +96,13 @@ dynamixel::GroupSyncRead groupSyncRead(portHandler, packetHandler, ADDR_PRO_PRES
 
 int index1 = 0;
 int dxl_comm_result = COMM_TX_FAIL;             // Communication result
+int tx_result = COMM_TX_FAIL;
+int rx_result = COMM_RX_FAIL;
+
 int dxl_goal_position[2] = {1024, 3072};         // Goal position
 bool dxl_addparam_result = false;
 bool dxl_getdata_result =false;
+int run = 0;
 
 //double a ;
 //double b ;
@@ -193,7 +197,7 @@ int main(int argc, char **argv)
 
   while (ros::ok())
   {
-    /*
+
 
     std_msgs::String msg;
     msg.data = "i said hello";
@@ -205,7 +209,7 @@ int main(int argc, char **argv)
     loop_rate.sleep();
 
     ROS_INFO("hello");
-    */
+
   }
 
 }
@@ -219,6 +223,40 @@ void ros_task(void* arg)
 
   while (1) {
     rt_task_wait_period(NULL);
+
+    if(run > 0)
+    {
+      //id 1
+      rx_result = packetHandler->read4ByteRx(portHandler, DXL1_ID, (uint32_t*)&dxl1_present_position, &dxl_error);
+      if (rx_result != COMM_SUCCESS)
+      {
+        packetHandler->getTxRxResult(rx_result);
+      }
+      else if (dxl_error != 0)
+      {
+        packetHandler->getRxPacketError(dxl_error);
+      }
+
+      printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL1_ID, dxl_goal_position[index1], dxl1_present_position);
+
+      //id 2
+      rx_result = packetHandler->read4ByteRx(portHandler, DXL2_ID, (uint32_t*)&dxl2_present_position, &dxl_error);
+      if (rx_result != COMM_SUCCESS)
+      {
+        packetHandler->getTxRxResult(rx_result);
+      }
+      else if (dxl_error != 0)
+      {
+        packetHandler->getRxPacketError(dxl_error);
+      }
+
+      printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL2_ID, dxl_goal_position[index1], dxl2_present_position);
+
+      printf("run in?: %d\n", run);
+
+      run = 0;
+
+    }
 
 
     /////////////////////////////////////////////////
@@ -266,8 +304,53 @@ void ros_task(void* arg)
         // Clear syncwrite parameter storage
         groupSyncWrite.clearParam();
 
-        do
+        if ((abs(dxl_goal_position[index1] - dxl1_present_position) > DXL_MOVING_STATUS_THRESHOLD) || (abs(dxl_goal_position[index1] - dxl2_present_position) > DXL_MOVING_STATUS_THRESHOLD))
         {
+          // Tx
+          tx_result = packetHandler->read4ByteTx(portHandler, DXL1_ID, ADDR_PRO_PRESENT_POSITION);
+
+          tx_result = packetHandler->read4ByteTx(portHandler, DXL2_ID, ADDR_PRO_PRESENT_POSITION);
+
+          //run = 1;
+
+          printf("run is?: %d\n", run);
+
+
+
+          //  read & write
+
+/*
+          // Read present position
+          dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL1_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl1_present_position, &dxl_error);
+          if (dxl_comm_result != COMM_SUCCESS)
+          {
+            packetHandler->getTxRxResult(dxl_comm_result);
+          }
+          else if (dxl_error != 0)
+          {
+            packetHandler->getRxPacketError(dxl_error);
+          }
+
+          printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL1_ID, dxl_goal_position[index1], dxl1_present_position);
+
+          // Read present position
+          dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL2_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl2_present_position, &dxl_error);
+          if (dxl_comm_result != COMM_SUCCESS)
+          {
+            packetHandler->getTxRxResult(dxl_comm_result);
+          }
+          else if (dxl_error != 0)
+          {
+            packetHandler->getRxPacketError(dxl_error);
+          }
+
+          printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL1_ID, dxl_goal_position[index1], dxl2_present_position);
+
+*/
+
+          //  syncread
+
+/*
           // Syncread present position
           dxl_comm_result = groupSyncRead.txRxPacket();
           if (dxl_comm_result != COMM_SUCCESS) packetHandler->getTxRxResult(dxl_comm_result);
@@ -276,14 +359,14 @@ void ros_task(void* arg)
           dxl_getdata_result = groupSyncRead.isAvailable(DXL1_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION);
           if (dxl_getdata_result != true)
           {
-            fprintf(stderr, "[ID:%03d] groupSyncRead getdata failed", DXL1_ID);
+            fprintf(stderr, "[ID:%03d] groupSyncRead getdata failed\n", DXL1_ID);
           }
 
           // Check if groupsyncread data of Dynamixel#2 is available
           dxl_getdata_result = groupSyncRead.isAvailable(DXL2_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION);
           if (dxl_getdata_result != true)
           {
-            fprintf(stderr, "[ID:%03d] groupSyncRead getdata failed", DXL2_ID);
+            fprintf(stderr, "[ID:%03d] groupSyncRead getdata failed\n", DXL2_ID);
           }
 
           // Get Dynamixel#1 present position value
@@ -293,17 +376,24 @@ void ros_task(void* arg)
           dxl2_present_position = groupSyncRead.getData(DXL2_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION);
 
           printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\t[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL1_ID, dxl_goal_position[index1], dxl1_present_position, DXL2_ID, dxl_goal_position[index1], dxl2_present_position);
-
-        }while((abs(dxl_goal_position[index1] - dxl1_present_position) > DXL_MOVING_STATUS_THRESHOLD) || (abs(dxl_goal_position[index1] - dxl2_present_position) > DXL_MOVING_STATUS_THRESHOLD));
-
-        // Change goal position
-        if (index1 == 0)
-        {
-          index1 = 1;
+*/
         }
-        else
+
+
+
+        if((abs(dxl_goal_position[index1] - dxl1_present_position) < DXL_MOVING_STATUS_THRESHOLD) || (abs(dxl_goal_position[index1] - dxl2_present_position) < DXL_MOVING_STATUS_THRESHOLD))
         {
-          index1 = 0;
+
+          // Change goal position
+          if (index1 == 0)
+           {
+             index1 = 1;
+           }
+          else
+          {
+             index1 = 0;
+          }
+
         }
 
 /*
