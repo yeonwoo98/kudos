@@ -121,6 +121,10 @@ dynamixel::GroupSyncRead groupSyncRead(portHandler, packetHandler, ADDR_PRO_PRES
 
 
 
+dynamixel::GroupBulkRead groupBulkRead(portHandler, packetHandler);
+
+
+
 int index1 = 0;
 int dxl_comm_result = COMM_TX_FAIL;             // Communication result
 int tx_result = COMM_TX_FAIL;
@@ -137,6 +141,8 @@ int run = 0;
 //double a ;
 
 //double b ;
+
+int dd = 0;
 
 
 uint8_t dxl_error = 0;                          // Dynamixel error
@@ -259,8 +265,8 @@ int main(int argc, char **argv)
     ros::spinOnce();
     loop_rate.sleep();
 
-
-    ROS_INFO("hello");
+    printf("hello: %d \n", dd);
+    dd = dd + 1;
 
   }
 
@@ -273,91 +279,45 @@ void ros_task(void* arg)
   rt_task_set_periodic(NULL, TM_NOW, cycle_ns * 10);
 
 
-  while (1) {
+  while (1)
+  {
     rt_task_wait_period(NULL);
 
     //Rx is here
 
+
     if(run > 0)
        {
-         //id 1
 
-         rx_result = packetHandler->read4ByteRx(portHandler, DXL1_ID, (uint32_t*)&dxl1_present_position, &dxl_error);
+      // Read present position
+            dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL1_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl1_present_position, &dxl_error);
+            if (dxl_comm_result != COMM_SUCCESS)
+            {
+              packetHandler->getTxRxResult(dxl_comm_result);
+            }
+            else if (dxl_error != 0)
+            {
+              packetHandler->getRxPacketError(dxl_error);
+            }
 
-         if (rx_result != COMM_SUCCESS)
-         {
-           packetHandler->getTxRxResult(rx_result);
-         }
+            dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL2_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl2_present_position, &dxl_error);
+            if (dxl_comm_result != COMM_SUCCESS)
+            {
+              packetHandler->getTxRxResult(dxl_comm_result);
+            }
+            else if (dxl_error != 0)
+            {
+              packetHandler->getRxPacketError(dxl_error);
+            }
 
-         else if (dxl_error != 0)
-         {
-           packetHandler->getRxPacketError(dxl_error);
-         }
-
-
-    //     printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL1_ID, dxl_goal_position[index1], dxl1_present_position);
-
-
-         //id 2
-
-         rx_result = packetHandler->read4ByteRx(portHandler, DXL2_ID, (uint32_t*)&dxl2_present_position, &dxl_error);
-
-         if (rx_result != COMM_SUCCESS)
-         {
-           packetHandler->getTxRxResult(rx_result);
-         }
-
-         else if (dxl_error != 0)
-         {
-           packetHandler->getRxPacketError(dxl_error);
-         }
-
-
-    //     printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL2_ID, dxl_goal_position[index1], dxl2_present_position);
-
-
-       //  printf("run in?: %d\n", run);
+    //        printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL1_ID, dxl_goal_position[index1], dxl1_present_position);
+    //        printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL2_ID, dxl_goal_position[index1], dxl2_present_position);
 
 
          run = 0;
 
-
        }
 
-
-
-
-
-    /////////////////////////////////////////////////
-
-/*
-
-    std_msgs::String msg;
-
-    msg.data = "send_data";
-
-
-    chatter_pub.publish(msg);
-
-
-    ros::spinOnce();
-
-
-    loop_rate.sleep();
-
-*/
-
-    ///////////////////////////////////////////////////
-
-/*
-
-    printf("Press any key to continue! (or press ESC to quit!)\n");
-
-       if (getch() == ESC_ASCII_VALUE)
-
-         break;
-
-*/
 
 
         // Allocate goal position value into byte array
@@ -374,7 +334,7 @@ void ros_task(void* arg)
 
         if (dxl_addparam_result != true)
         {
- //         fprintf(stderr, "[ID:%03d] groupSyncWrite addparam failed", DXL1_ID);
+          fprintf(stderr, "[ID:%03d] groupSyncWrite addparam failed", DXL1_ID);
         }
 
 
@@ -384,7 +344,7 @@ void ros_task(void* arg)
 
         if (dxl_addparam_result != true)
         {
-    //      fprintf(stderr, "[ID:%03d] groupSyncWrite addparam failed", DXL2_ID);
+          fprintf(stderr, "[ID:%03d] groupSyncWrite addparam failed", DXL2_ID);
         }
 
 
@@ -407,132 +367,27 @@ void ros_task(void* arg)
         {
 
           // Tx
-          tx_result = packetHandler->read4ByteTx(portHandler, DXL1_ID, ADDR_PRO_PRESENT_POSITION);
 
-          tx_result = packetHandler->read4ByteTx(portHandler, DXL2_ID, ADDR_PRO_PRESENT_POSITION);
+          // Get 1 present position value
+          dxl1_present_position = groupBulkRead.getData(DXL1_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION);
+
+          // Get 2 present position value
+          dxl2_present_position = groupBulkRead.getData(DXL2_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION);
+
+        //  printf("[ID:%03d] Present Position : %d \t [ID:%03d] LED Value: %d\n", DXL1_ID, dxl1_present_position, DXL2_ID, dxl2_present_position);
 
           run = 1;
 
 
 
-       //   printf("run is?: %d\n", run);
+        // printf("run is?: %d\n", run);
 
 
-
-
-          //  read & write
-
-
-/*
-
-          // Read present position
-
-          dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL1_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl1_present_position, &dxl_error);
-
-          if (dxl_comm_result != COMM_SUCCESS)
-
-          {
-
-            packetHandler->getTxRxResult(dxl_comm_result);
-
-          }
-
-          else if (dxl_error != 0)
-
-          {
-
-            packetHandler->getRxPacketError(dxl_error);
-
-          }
-
-
-          printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL1_ID, dxl_goal_position[index1], dxl1_present_position);
-
-
-          // Read present position
-
-          dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL2_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl2_present_position, &dxl_error);
-
-          if (dxl_comm_result != COMM_SUCCESS)
-
-          {
-
-            packetHandler->getTxRxResult(dxl_comm_result);
-
-          }
-
-          else if (dxl_error != 0)
-
-          {
-
-            packetHandler->getRxPacketError(dxl_error);
-
-          }
-
-
-          printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL1_ID, dxl_goal_position[index1], dxl2_present_position);
-
-
-*/
-
-
-          //  syncread
-
-
-/*
-
-          // Syncread present position
-
-          dxl_comm_result = groupSyncRead.txRxPacket();
-
-          if (dxl_comm_result != COMM_SUCCESS) packetHandler->getTxRxResult(dxl_comm_result);
-
-
-          // Check if groupsyncread data of Dynamixel#1 is available
-
-          dxl_getdata_result = groupSyncRead.isAvailable(DXL1_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION);
-
-          if (dxl_getdata_result != true)
-
-          {
-
-            fprintf(stderr, "[ID:%03d] groupSyncRead getdata failed\n", DXL1_ID);
-
-          }
-
-
-          // Check if groupsyncread data of Dynamixel#2 is available
-
-          dxl_getdata_result = groupSyncRead.isAvailable(DXL2_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION);
-
-          if (dxl_getdata_result != true)
-
-          {
-
-            fprintf(stderr, "[ID:%03d] groupSyncRead getdata failed\n", DXL2_ID);
-
-          }
-
-
-          // Get Dynamixel#1 present position value
-
-          dxl1_present_position = groupSyncRead.getData(DXL1_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION);
-
-
-          // Get Dynamixel#2 present position value
-
-          dxl2_present_position = groupSyncRead.getData(DXL2_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION);
-
-
-          printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\t[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL1_ID, dxl_goal_position[index1], dxl1_present_position, DXL2_ID, dxl_goal_position[index1], dxl2_present_position);
-
-
-*/
         }
 
 
 
-}
+
 
 
         if((abs(dxl_goal_position[index1] - dxl1_present_position) < DXL_MOVING_STATUS_THRESHOLD) || (abs(dxl_goal_position[index1] - dxl2_present_position) < DXL_MOVING_STATUS_THRESHOLD))
@@ -549,121 +404,12 @@ void ros_task(void* arg)
           else
           {
              index1 = 0;
-          }
+          }         
 
         }
 
+ }
 
-
-
-
-/*
-
-       // Write goal position
-
-       dxl_comm_result = packetHandler->write4ByteTxRx(portHandler, DXL_ID, ADDR_PRO_GOAL_POSITION, dxl_goal_position[index1], &dxl_error);
-
-       if (dxl_comm_result != COMM_SUCCESS)
-
-       {
-
-         packetHandler->getTxRxResult(dxl_comm_result);
-
-       }
-
-       else if (dxl_error != 0)
-
-       {
-
-         packetHandler->getRxPacketError(dxl_error);
-
-       }
-
-
-        dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl_present_position, &dxl_error);
-
-        if (dxl_comm_result != COMM_SUCCESS)
-
-       {
-
-         packetHandler->getTxRxResult(dxl_comm_result);
-
-       }
-
-       else if (dxl_error != 0)
-
-       {
-
-         packetHandler->getRxPacketError(dxl_error);
-
-       }
-
-
-       do
-
-       {
-
-         // Read present position
-
-         dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl_present_position, &dxl_error);
-
-         if (dxl_comm_result != COMM_SUCCESS)
-
-         {
-
-           packetHandler->getTxRxResult(dxl_comm_result);
-
-         }
-
-         else if (dxl_error != 0)
-
-         {
-
-           packetHandler->getRxPacketError(dxl_error);
-
-         }
-
-
-         printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL_ID, dxl_goal_position[index1], dxl_present_position);
-
-
-       }while((abs(dxl_goal_position[index1] - dxl_present_position) > DXL_MOVING_STATUS_THRESHOLD));
-
-
-
-        // Change goal position
-
-
-       if ((abs(dxl_goal_position[index1] - dxl_present_position) < DXL_MOVING_STATUS_THRESHOLD))
-
-       {
-
-          if (index1 == 0)
-
-          {
-
-             index1 = 1;
-
-          }
-
-          else
-
-          {
-
-            index1 = 0;
-
-          }
-
-       }
-
-*/
-
-   // ROSMsgPublish();
-
-
-
-
-  ////////////////////////////////////////
 
 
   // Disable Dynamixel#1 Torque
@@ -700,6 +446,7 @@ void ros_task(void* arg)
     // Close port
 
     portHandler->closePort();
+
 
     return ;
 
