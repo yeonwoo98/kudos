@@ -287,18 +287,6 @@ void ros_task(void* arg)
 
     //Rx is here
 
-    if(run == 0)
-    {
-      // Get 1 present position value
-      dxl1_present_position = groupBulkRead.getData(DXL1_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION);
-
-      // Get 2 present position value
-      dxl2_present_position = groupBulkRead.getData(DXL2_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION);
-
-      printf("[ID:%03d] Present Position : %d \t [ID:%03d] Present Position: %d\n", DXL1_ID, dxl1_present_position, DXL2_ID, dxl2_present_position);
-
-    }
-
 
       // Read present position
             dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL1_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl1_present_position, &dxl_error);
