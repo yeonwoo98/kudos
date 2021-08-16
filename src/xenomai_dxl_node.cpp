@@ -130,16 +130,17 @@ int dxl_comm_result = COMM_TX_FAIL;             // Communication result
 int tx_result = COMM_TX_FAIL;
 int rx_result = COMM_RX_FAIL;
 int rx_result2 = COMM_RX_FAIL;
-double a;
-double b;
+double a = 1024;
+double b = 1024;
 
-double dxl_goal_position[2] = {a, b};         // Goal position int->double
+int dxl_goal_position[2] = {1024, 3072};         // Goal position int->double
 bool dxl_addparam_result = false;
 bool dxl_getdata_result =false;
 
 int run = 0;
-double t = 0;
+double tik = 0;
 double ot = 1;  //operating time (seconds)
+int tx = 0;
 
 
 
@@ -281,13 +282,13 @@ void ros_task(void* arg)
   rt_task_set_periodic(NULL, TM_NOW, cycle_ns * 10);
 
 
+
+
   while (1)
   {
     rt_task_wait_period(NULL);
 
-    //Rx is here
-
-    if(run == 0)
+    if(tx == 0)
     {
       // Get 1 present position value
       dxl1_present_position = groupBulkRead.getData(DXL1_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION);
@@ -295,10 +296,13 @@ void ros_task(void* arg)
       // Get 2 present position value
       dxl2_present_position = groupBulkRead.getData(DXL2_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION);
 
-      printf("[ID:%03d] Present Position : %d \t [ID:%03d] Present Position: %d\n", DXL1_ID, dxl1_present_position, DXL2_ID, dxl2_present_position);
-
+      tx = 1;
     }
 
+
+    if(tx == 1)
+    {
+    //Rx is here
 
       // Read present position
             dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL1_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl1_present_position, &dxl_error);
@@ -310,6 +314,8 @@ void ros_task(void* arg)
             {
               packetHandler->getRxPacketError(dxl_error);
             }
+
+            //printf("its 1 present position: %d \n", dxl1_present_position);
 
             dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL2_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl2_present_position, &dxl_error);
             if (dxl_comm_result != COMM_SUCCESS)
@@ -325,33 +331,44 @@ void ros_task(void* arg)
             printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL2_ID, dxl_goal_position[index1], dxl2_present_position);
 
 
-    int start_pos_1 = 3000;
-    int start_pos_2 = 3000;
+    int32_t start_pos_1;
+    int32_t start_pos_2;
 
-    if(t == 0)
+
+    if(tik == 0)
     {
       start_pos_1 = dxl1_present_position;
       start_pos_2 = dxl2_present_position;
 
-      printf("st_pos: %f", start_pos_1);
-      printf("st_pos: %f", start_pos_2);
+
+      printf("pres position: %d\n", dxl1_present_position);
+      printf("pres position: %d\n", dxl2_present_position);
+
+      //printf("st_pos1: %f\n", start_pos_1);
+      //printf("st_pos2: %f\n", start_pos_2);
 
       //printf("st1: %f, st2: %f \n", start_pos_1, start_pos_2);
     }
 
 
-    a = start_pos_1 + abs(dxl1_present_position - 1024) * (sin(M_PI * (t / (100 * ot) - 0.5))+ 1);
-    b = start_pos_2 + abs(dxl2_present_position - 3072) * (sin(M_PI * (t / (100 * ot) - 0.5))+ 1);
+
+    a = abs(1024 - dxl1_present_position) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1);
+    b = 1024 / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1);
+
+    tik++;
+
 
     printf("a: %f\n", a);
     printf("b: %f\n", b);
+    printf("tik: %f\n", tik);
 
-    t++;
+    if (tik == 100)
+    {
+      tik = 0;
+    }
 
 
 
-if(t <100 * ot +1)
- {
         // Allocate goal position value into byte array
 
         param_goal_position[0] = DXL_LOBYTE(DXL_LOWORD(dxl_goal_position[index1]));
@@ -390,12 +407,14 @@ if(t <100 * ot +1)
         // Clear syncwrite parameter storage
 
         groupSyncWrite.clearParam();
+        
+        
 
 //Tx is here
 
 
         if ((abs(dxl_goal_position[index1] - dxl1_present_position) > DXL_MOVING_STATUS_THRESHOLD) || (abs(dxl_goal_position[index1] - dxl2_present_position) > DXL_MOVING_STATUS_THRESHOLD))
-
+        
         {
 
           // Tx
@@ -428,16 +447,16 @@ if(t <100 * ot +1)
           if (index1 == 0)
            {
              index1 = 1;
-             t = 0;
            }
 
           else
           {
              index1 = 0;
-             t = 0;
           }         
 
         }
+
+
 
   }
 
