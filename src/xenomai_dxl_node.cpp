@@ -79,7 +79,7 @@ double max_time = 0.0;
 #define DXL1_ID                          1                   // Dynamixel ID: 1
 #define DXL2_ID                          2
 #define BAUDRATE                        2000000
-#define DEVICENAME                      "/dev/ttyUSB0"      // Check which port is being used on your controller
+#define DEVICENAME                      "/dev/ttyUSB1"      // Check which port is being used on your controller
 
                                                             // ex) Windows: "COM1"   Linux: "/dev/ttyUSB0"
 
@@ -130,18 +130,23 @@ int dxl_comm_result = COMM_TX_FAIL;             // Communication result
 int tx_result = COMM_TX_FAIL;
 int rx_result = COMM_RX_FAIL;
 int rx_result2 = COMM_RX_FAIL;
-double a = 1024;
-double b = 1024;
+double a ;
+double b ;
 
-int dxl_goal_position[2] = {1024, 3072};         // Goal position int->double
+int start_pos_1;
+int start_pos_2;
+
+int num_a ;
+int num_b ;
+
+//int dxl_goal_position[2] = {num_a, num_b};         // Goal position int->double
 bool dxl_addparam_result = false;
 bool dxl_getdata_result =false;
 
 int run = 0;
 double tik = 0;
-double ot = 1;  //operating time (seconds)
+int ot = 1;  //operating time (seconds)
 int tx = 0;
-
 
 
 
@@ -288,6 +293,9 @@ void ros_task(void* arg)
   {
     rt_task_wait_period(NULL);
 
+    int dxl_goal_position[2] = {num_a, num_b};         // Goal position int->double
+
+
     if(tx == 0)
     {
       // Get 1 present position value
@@ -296,7 +304,6 @@ void ros_task(void* arg)
       // Get 2 present position value
       dxl2_present_position = groupBulkRead.getData(DXL2_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION);
 
-      tx = 1;
     }
 
 
@@ -331,8 +338,7 @@ void ros_task(void* arg)
             printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL2_ID, dxl_goal_position[index1], dxl2_present_position);
 
 
-    int32_t start_pos_1;
-    int32_t start_pos_2;
+
 
 
     if(tik == 0)
@@ -341,31 +347,31 @@ void ros_task(void* arg)
       start_pos_2 = dxl2_present_position;
 
 
-      printf("pres position: %d\n", dxl1_present_position);
-      printf("pres position: %d\n", dxl2_present_position);
+      //printf("pres position: %d\n", dxl1_present_position);
+      //printf("pres position: %d\n", dxl2_present_position);
 
-      //printf("st_pos1: %f\n", start_pos_1);
-      //printf("st_pos2: %f\n", start_pos_2);
+      printf("st_pos1: %d\n", start_pos_1);
+      printf("st_pos2: %d\n", start_pos_2);
 
       //printf("st1: %f, st2: %f \n", start_pos_1, start_pos_2);
     }
 
 
 
-    a = abs(1024 - dxl1_present_position) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1);
-    b = 1024 / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1);
+    a = (3072 - start_pos_1) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1) + start_pos_1;
+    b = (1024 - start_pos_1) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1) + start_pos_1;
 
+
+    num_a = int(a);
+    num_b = int(b);
     tik++;
 
 
-    printf("a: %f\n", a);
-    printf("b: %f\n", b);
+    printf("num_a: %d\n", num_a);
+    printf("num_b: %d\n", num_b);
     printf("tik: %f\n", tik);
 
-    if (tik == 100)
-    {
-      tik = 0;
-    }
+
 
 
 
@@ -412,8 +418,9 @@ void ros_task(void* arg)
 
 //Tx is here
 
+/*
 
-        if ((abs(dxl_goal_position[index1] - dxl1_present_position) > DXL_MOVING_STATUS_THRESHOLD) || (abs(dxl_goal_position[index1] - dxl2_present_position) > DXL_MOVING_STATUS_THRESHOLD))
+        if ((abs(dxl_goal_position[index1] - dxl1_present_position) >= DXL_MOVING_STATUS_THRESHOLD) || (abs(dxl_goal_position[index1] - dxl2_present_position) >= DXL_MOVING_STATUS_THRESHOLD))
         
         {
 
@@ -430,16 +437,31 @@ void ros_task(void* arg)
 
         // printf("run is?: %d\n", run);
 
-
         }
 
+  */
 
 
+        if (tik == 101)
+        {
 
+            // Change goal position
 
+             if (index1 == 0)
+             {
+              index1 = 1;
+             }
 
+             else
+             {
+               index1 = 0;
+             }
+
+             tik = 0;
+        }
+
+        /*
         if((abs(dxl_goal_position[index1] - dxl1_present_position) < DXL_MOVING_STATUS_THRESHOLD) || (abs(dxl_goal_position[index1] - dxl2_present_position) < DXL_MOVING_STATUS_THRESHOLD))
-
         {
 
           // Change goal position
@@ -455,10 +477,13 @@ void ros_task(void* arg)
           }         
 
         }
-
-
-
+        */
   }
+
+    if (tx == 0)
+    {
+      tx = 1;
+    }
 
  }
 
