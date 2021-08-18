@@ -79,7 +79,7 @@ double max_time = 0.0;
 #define DXL1_ID                          1                   // Dynamixel ID: 1
 #define DXL2_ID                          2
 #define BAUDRATE                        2000000
-#define DEVICENAME                      "/dev/ttyUSB1"      // Check which port is being used on your controller
+#define DEVICENAME                      "/dev/ttyUSB0"      // Check which port is being used on your controller
 
                                                             // ex) Windows: "COM1"   Linux: "/dev/ttyUSB0"
 
@@ -284,8 +284,7 @@ int main(int argc, char **argv)
 
 void ros_task(void* arg)
 {
-  rt_task_set_periodic(NULL, TM_NOW, cycle_ns * 10);
-
+  rt_task_set_periodic(NULL, TM_NOW, cycle_ns * 40);
 
 
 
@@ -312,33 +311,30 @@ void ros_task(void* arg)
     //Rx is here
 
       // Read present position
-            dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL1_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl1_present_position, &dxl_error);
-            if (dxl_comm_result != COMM_SUCCESS)
-            {
-              packetHandler->getTxRxResult(dxl_comm_result);
-            }
-            else if (dxl_error != 0)
-            {
-              packetHandler->getRxPacketError(dxl_error);
-            }
+         dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL1_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl1_present_position, &dxl_error);
+         if (dxl_comm_result != COMM_SUCCESS)
+         {
+           packetHandler->getTxRxResult(dxl_comm_result);
+         }
+         else if (dxl_error != 0)
+         {
+           packetHandler->getRxPacketError(dxl_error);
+         }
 
-            //printf("its 1 present position: %d \n", dxl1_present_position);
+         //printf("its 1 present position: %d \n", dxl1_present_position);
 
-            dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL2_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl2_present_position, &dxl_error);
-            if (dxl_comm_result != COMM_SUCCESS)
-            {
-              packetHandler->getTxRxResult(dxl_comm_result);
-            }
-            else if (dxl_error != 0)
-            {
-              packetHandler->getRxPacketError(dxl_error);
-            }
+         dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL2_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl2_present_position, &dxl_error);
+         if (dxl_comm_result != COMM_SUCCESS)
+         {
+           packetHandler->getTxRxResult(dxl_comm_result);
+         }
+         else if (dxl_error != 0)
+         {
+           packetHandler->getRxPacketError(dxl_error);
+         }
 
-            printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL1_ID, dxl_goal_position[index1], dxl1_present_position);
-            printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL2_ID, dxl_goal_position[index1], dxl2_present_position);
-
-
-
+         //printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL1_ID, dxl_goal_position[index1], dxl1_present_position);
+         //printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL2_ID, dxl_goal_position[index1], dxl2_present_position);
 
 
     if(tik == 0)
@@ -358,8 +354,11 @@ void ros_task(void* arg)
 
 
 
-    a = (3072 - start_pos_1) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1) + start_pos_1;
-    b = (1024 - start_pos_1) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1) + start_pos_1;
+    //a = (3072 - start_pos_1) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1) + start_pos_1;
+    //b = (1024 - start_pos_1) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1) + start_pos_1;
+
+    a = (3072 - start_pos_1) / 2 * (1 - cos(M_PI * (tik / (100 * ot)))) +start_pos_1;
+    b = (1024 - start_pos_1) / 2 * (1 - cos(M_PI * (tik / (100 * ot)))) +start_pos_1;
 
 
     num_a = int(a);
