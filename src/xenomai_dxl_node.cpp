@@ -151,6 +151,7 @@ int tx = 0;
 
 
 int dd = 0;
+int count = 0;
 
 
 uint8_t dxl_error = 0;                          // Dynamixel error
@@ -284,7 +285,7 @@ int main(int argc, char **argv)
 
 void ros_task(void* arg)
 {
-  rt_task_set_periodic(NULL, TM_NOW, cycle_ns * 40);
+  rt_task_set_periodic(NULL, TM_NOW, cycle_ns * 10);
 
 
 
@@ -353,12 +354,11 @@ void ros_task(void* arg)
     }
 
 
+    a = (3066 - start_pos_1) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1) + start_pos_1;
+    b = (1028 - start_pos_1) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1) + start_pos_1;
 
-    //a = (3072 - start_pos_1) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1) + start_pos_1;
-    //b = (1024 - start_pos_1) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1) + start_pos_1;
-
-    a = (3072 - start_pos_1) / 2 * (1 - cos(M_PI * (tik / (100 * ot)))) +start_pos_1;
-    b = (1024 - start_pos_1) / 2 * (1 - cos(M_PI * (tik / (100 * ot)))) +start_pos_1;
+    //a = (3072 - start_pos_1) / 2 * (1 - cos(M_PI * (tik / (100 * ot)))) +start_pos_1;
+    //b = (1024 - start_pos_1) / 2 * (1 - cos(M_PI * (tik / (100 * ot)))) +start_pos_1;
 
 
     num_a = int(a);
@@ -366,11 +366,9 @@ void ros_task(void* arg)
     tik++;
 
 
-    printf("num_a: %d\n", num_a);
-    printf("num_b: %d\n", num_b);
-    printf("tik: %f\n", tik);
-
-
+    //printf("num_a: %d\n", num_a);
+    //printf("num_b: %d\n", num_b);
+    //printf("tik: %f\n", tik);
 
 
 
@@ -383,6 +381,7 @@ void ros_task(void* arg)
 
 
         // Add Dynamixel#1 goal position value to the Syncwrite storage
+
 
         dxl_addparam_result = groupSyncWrite.addParam(DXL1_ID, param_goal_position);
 
@@ -412,15 +411,16 @@ void ros_task(void* arg)
         // Clear syncwrite parameter storage
 
         groupSyncWrite.clearParam();
-        
-        
+
+
+
 
 //Tx is here
 
 /*
 
         if ((abs(dxl_goal_position[index1] - dxl1_present_position) >= DXL_MOVING_STATUS_THRESHOLD) || (abs(dxl_goal_position[index1] - dxl2_present_position) >= DXL_MOVING_STATUS_THRESHOLD))
-        
+
         {
 
           // Tx
@@ -448,7 +448,7 @@ void ros_task(void* arg)
 
              if (index1 == 0)
              {
-              index1 = 1;
+               index1 = 1;
              }
 
              else
@@ -456,7 +456,12 @@ void ros_task(void* arg)
                index1 = 0;
              }
 
+             count++;
+
              tik = 0;
+
+             printf("index1: %d\n", index1);
+
         }
 
         /*
@@ -473,7 +478,7 @@ void ros_task(void* arg)
           else
           {
              index1 = 0;
-          }         
+          }
 
         }
         */
