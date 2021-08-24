@@ -1,3 +1,4 @@
+
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 
@@ -136,8 +137,8 @@ double b ;
 int start_pos_1;
 int start_pos_2;
 
-int num_a ;
-int num_b ;
+int num_a = 0 ;
+int num_b = 0 ;
 
 //int dxl_goal_position[2] = {num_a, num_b};         // Goal position int->double
 bool dxl_addparam_result = false;
@@ -291,6 +292,9 @@ void ros_task(void* arg)
 
   while (1)
   {
+
+    clock_t start = clock(); //%%%%%%%%%%%%%%%%
+
     rt_task_wait_period(NULL);
 
     int dxl_goal_position[2] = {num_a, num_b};         // Goal position int->double
@@ -309,7 +313,12 @@ void ros_task(void* arg)
 
     if(tx == 1)
     {
-    //Rx is here
+
+
+      if(tik == 0)
+      {
+      //Rx is here
+         printf("tx, tik ok");
 
       // Read present position
          dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL1_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl1_present_position, &dxl_error);
@@ -338,8 +347,7 @@ void ros_task(void* arg)
          //printf("[ID:%03d] GoalPos:%03d  PresPos:%03d\n", DXL2_ID, dxl_goal_position[index1], dxl2_present_position);
 
 
-    if(tik == 0)
-    {
+
       start_pos_1 = dxl1_present_position;
       start_pos_2 = dxl2_present_position;
 
@@ -347,28 +355,40 @@ void ros_task(void* arg)
       //printf("pres position: %d\n", dxl1_present_position);
       //printf("pres position: %d\n", dxl2_present_position);
 
-      printf("st_pos1: %d\n", start_pos_1);
-      printf("st_pos2: %d\n", start_pos_2);
+      //printf("st_pos1: %d\n", start_pos_1);
+      //printf("st_pos2: %d\n", start_pos_2);
+
 
       //printf("st1: %f, st2: %f \n", start_pos_1, start_pos_2);
     }
 
 
-    a = (3066 - start_pos_1) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1) + start_pos_1;
-    b = (1028 - start_pos_1) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1) + start_pos_1;
+
+    //a = (3072 - start_pos_1) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1) + start_pos_1;
+    //b = (1024 - start_pos_1) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1) + start_pos_1;
 
     //a = (3072 - start_pos_1) / 2 * (1 - cos(M_PI * (tik / (100 * ot)))) +start_pos_1;
     //b = (1024 - start_pos_1) / 2 * (1 - cos(M_PI * (tik / (100 * ot)))) +start_pos_1;
 
+    a = (3072 - 1024) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1) + 1024;
+    b = (1024 - 3072) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1) + 3072;
 
-    num_a = int(a);
-    num_b = int(b);
+
+    //double a1;
+    //a1 = (1024) / 2 * (sin(M_PI * (tik / (100 * ot) - 0.5))+ 1) + start_pos_1;
+
+
+    num_a = int(round(a));
+    num_b = int(round(b));
     tik++;
 
+    //printf("a: %f \nb: %f\n", a, b);
 
-    //printf("num_a: %d\n", num_a);
-    //printf("num_b: %d\n", num_b);
-    //printf("tik: %f\n", tik);
+
+
+    printf("num_a: %d\n", num_a);
+    printf("num_b: %d\n", num_b);
+    printf("tik: %f\n", tik);
 
 
 
@@ -456,8 +476,6 @@ void ros_task(void* arg)
                index1 = 0;
              }
 
-             count++;
-
              tik = 0;
 
              printf("index1: %d\n", index1);
@@ -489,8 +507,11 @@ void ros_task(void* arg)
       tx = 1;
     }
 
- }
 
+    clock_t end = clock(); //%%%%%%%%%%%%%%%%
+    printf("operating TiMe(ms): %lf\n",(double)(end - start)/CLOCKS_PER_SEC * 1000);
+
+ }
 
 
   // Disable Dynamixel#1 Torque
@@ -535,5 +556,6 @@ void ros_task(void* arg)
   ///////////////////////////////////////
 
   return ;
+
 
 }
